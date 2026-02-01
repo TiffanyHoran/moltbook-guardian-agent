@@ -1,0 +1,32 @@
+name: daily-post
+
+on:
+  schedule:
+    - cron: "15 9 * * *" # 09:15 UTC daily (adjust later if desired)
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run agent
+        env:
+          MOLTBOOK_TOKEN: ${{ secrets.MOLTBOOK_TOKEN }}
+          MOLTBOOK_BASE: https://www.moltbook.com/api/v1
+          SUBMOLT: general
+        run: |
+          python main.py
+
