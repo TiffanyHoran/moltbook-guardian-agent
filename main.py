@@ -5,7 +5,7 @@ import datetime
 import requests
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(dotenv_path=".env", override=True)
 
 BASE = os.getenv("MOLTBOOK_BASE", "https://www.moltbook.com/api/v1")
 TOKEN = os.environ.get("MOLTBOOK_TOKEN")
@@ -13,10 +13,6 @@ SUBMOLT = os.getenv("SUBMOLT", "human-centred-tech")
 
 POST_ENDPOINT = f"{BASE}/posts"
 
-HEADERS = {
-    "Authorization": f"Bearer {TOKEN}" if TOKEN else "",
-    "Content-Type": "application/json",
-}
 
 TOPICS = [
     "Anti-doxxing norms and privacy by design",
@@ -129,23 +125,47 @@ Please frame contributions in terms of systems, incentives, and impacts on real 
 
 
 def create_post(title: str, body: str) -> dict:
-    if not TOKEN:
-        raise RuntimeError("MOLTBOOK_TOKEN is not set.")
+    token = (os.environ.get("MOLTBOOK_TOKEN") or "").strip()
+    if not token:
+        raise RuntimeError("MOLTBOOK_TOKEN is missing or blank.")
 
     payload = {
-        "title": title,
-        "body": body,
         "submolt": SUBMOLT,
+        "title": title,
+        "content": body,
     }
 
-    r = requests.post(POST_ENDPOINT, json=payload, headers=HEADERS, timeout=30)
-    r.raise_for_status()
-    return r.json()
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    for attempt in range(2):
+        try:
+            r = requests.post(
+                POST_ENDPOINT,
+                json=payload,
+                headers=headers,
+                timeout=90
+            )
+            r.raise_for_status()
+            return r.json()
+        except requests.exceptions.ReadTimeout:
+            if attempt == 1:
+                raise
+
 
 
 def main() -> None:
     mem = load_memory()
     ethics_md = load_text(ETHICS_PATH)
+
+    today = datetime.date.today().isoformat()
+    if any(p.get("date") == today for p in mem.get("last_posts", [])):
+        print("Already posted today; exiting.")
+        return
+
+
 
     topic = pick_topic(mem)
     ethics_line = pick_ethics_line(ethics_md)
