@@ -1,9 +1,9 @@
 name: daily-post
 
 on:
-  schedule:
-    - cron: "15 9 * * *" # 09:15 UTC daily (adjust later if desired)
   workflow_dispatch:
+  schedule:
+    - cron: "15 9 * * *"
 
 jobs:
   run:
